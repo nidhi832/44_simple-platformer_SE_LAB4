@@ -2,6 +2,7 @@ import pygame
 from .player import Player
 from .platform import Platform
 from .hazard import Hazard
+from .sound import SoundManager
 
 # Game Engine
 
@@ -60,6 +61,7 @@ class GameEngine:
         self.subtitle_font = pygame.font.SysFont("Arial", 28)
         self.prompt_font = pygame.font.SysFont("Arial", 20)
         self.game_over = False
+        self.sound = SoundManager()
 
     def set_difficulty(self, diff_name):
         if diff_name in DIFFICULTIES:
@@ -92,7 +94,8 @@ class GameEngine:
             return
 
         if event.type == pygame.KEYDOWN and event.key in (pygame.K_SPACE, pygame.K_UP, pygame.K_w):
-            self.player.jump()
+            if self.player.jump():
+                self.sound.play_jump()
 
     def handle_input(self):
         if self.game_over:
@@ -142,14 +145,17 @@ class GameEngine:
         for hazard in self.hazards:
             if self.player.rect().colliderect(hazard.rect()):
                 self.game_over = True
+                self.sound.play_death()
                 return
 
         if self.player.y > self.height:
             self.game_over = True
+            self.sound.play_death()
             return
 
         if self.player.x >= self.goal_x:
             self.score += 1
+            self.sound.play_goal()
             self.player.x, self.player.y = self.start_x, self.start_y
             self.player.vy = 0
 
