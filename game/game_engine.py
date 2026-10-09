@@ -9,6 +9,8 @@ WHITE = (255, 255, 255)
 BROWN = (150, 100, 60)
 RED = (220, 60, 60)
 GREEN = (0, 200, 0)
+GRAY = (200, 200, 200)
+GOLD = (255, 215, 0)
 
 class GameEngine:
     def __init__(self, width, height):
@@ -34,13 +36,32 @@ class GameEngine:
 
         self.score = 0
         self.font = pygame.font.SysFont("Arial", 30)
+        self.title_font = pygame.font.SysFont("Arial", 54, bold=True)
+        self.subtitle_font = pygame.font.SysFont("Arial", 32)
+        self.prompt_font = pygame.font.SysFont("Arial", 22)
         self.game_over = False
 
+    def reset_game(self):
+        self.player.x, self.player.y = self.start_x, self.start_y
+        self.player.vx = 0
+        self.player.vy = 0
+        self.player.on_ground = False
+        self.score = 0
+        self.game_over = False
+        self._game_over_logged = False
+
     def handle_event(self, event):
+        if self.game_over:
+            if event.type == pygame.KEYDOWN and event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_r):
+                self.reset_game()
+            return
+
         if event.type == pygame.KEYDOWN and event.key in (pygame.K_SPACE, pygame.K_UP, pygame.K_w):
             self.player.jump()
 
     def handle_input(self):
+        if self.game_over:
+            return
         keys = pygame.key.get_pressed()
         self.player.vx = 0
         if keys[pygame.K_LEFT] or keys[pygame.K_a]:
@@ -111,7 +132,27 @@ class GameEngine:
         score_text = self.font.render(f"Score: {self.score}", True, WHITE)
         screen.blit(score_text, (10, 10))
 
-        if self.game_over and not getattr(self, "_game_over_logged", False):
-            # NOTE: no proper game-over screen yet - see Task 2 in the README.
-            print("Game over! Final score:", self.score)
-            self._game_over_logged = True
+        if self.game_over:
+            if not getattr(self, "_game_over_logged", False):
+                print("Game over! Final score:", self.score)
+                self._game_over_logged = True
+
+            # Dark translucent overlay
+            overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 190))
+            screen.blit(overlay, (0, 0))
+
+            # Game Over Title
+            title_surf = self.title_font.render("GAME OVER", True, RED)
+            title_rect = title_surf.get_rect(center=(self.width // 2, self.height // 2 - 60))
+            screen.blit(title_surf, title_rect)
+
+            # Final Score
+            score_surf = self.subtitle_font.render(f"Final Score: {self.score}", True, GOLD)
+            score_rect = score_surf.get_rect(center=(self.width // 2, self.height // 2 + 5))
+            screen.blit(score_surf, score_rect)
+
+            # User input prompt
+            prompt_surf = self.prompt_font.render("Press SPACE or ENTER to Continue", True, GRAY)
+            prompt_rect = prompt_surf.get_rect(center=(self.width // 2, self.height // 2 + 65))
+            screen.blit(prompt_surf, prompt_rect)
