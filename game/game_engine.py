@@ -12,6 +12,24 @@ GREEN = (0, 200, 0)
 GRAY = (200, 200, 200)
 GOLD = (255, 215, 0)
 
+DIFFICULTIES = {
+    "Easy": {
+        "gravity": 0.45,
+        "jump_strength": -13.0,
+        "desc": "Light Gravity & High Jump",
+    },
+    "Medium": {
+        "gravity": 0.60,
+        "jump_strength": -12.0,
+        "desc": "Standard Gravity & Normal Jump",
+    },
+    "Hard": {
+        "gravity": 0.78,
+        "jump_strength": -11.0,
+        "desc": "Heavy Gravity & Tight Jump",
+    },
+}
+
 class GameEngine:
     def __init__(self, width, height):
         self.width = width
@@ -20,6 +38,8 @@ class GameEngine:
 
         self.start_x, self.start_y = 40, height - 120
         self.player = Player(self.start_x, self.start_y)
+        self.difficulty = "Medium"
+        self.set_difficulty("Medium")
 
         # A simple hand-built level: platforms with gaps between them
         # (falling into a gap means falling off the bottom of the
@@ -37,11 +57,19 @@ class GameEngine:
         self.score = 0
         self.font = pygame.font.SysFont("Arial", 30)
         self.title_font = pygame.font.SysFont("Arial", 54, bold=True)
-        self.subtitle_font = pygame.font.SysFont("Arial", 32)
-        self.prompt_font = pygame.font.SysFont("Arial", 22)
+        self.subtitle_font = pygame.font.SysFont("Arial", 28)
+        self.prompt_font = pygame.font.SysFont("Arial", 20)
         self.game_over = False
 
-    def reset_game(self):
+    def set_difficulty(self, diff_name):
+        if diff_name in DIFFICULTIES:
+            self.difficulty = diff_name
+            self.gravity = DIFFICULTIES[diff_name]["gravity"]
+            self.player.jump_strength = DIFFICULTIES[diff_name]["jump_strength"]
+
+    def reset_game(self, difficulty=None):
+        if difficulty:
+            self.set_difficulty(difficulty)
         self.player.x, self.player.y = self.start_x, self.start_y
         self.player.vx = 0
         self.player.vy = 0
@@ -52,8 +80,15 @@ class GameEngine:
 
     def handle_event(self, event):
         if self.game_over:
-            if event.type == pygame.KEYDOWN and event.key in (pygame.K_SPACE, pygame.K_RETURN, pygame.K_r):
-                self.reset_game()
+            if event.type == pygame.KEYDOWN:
+                if event.key in (pygame.K_1, pygame.K_e):
+                    self.reset_game("Easy")
+                elif event.key in (pygame.K_2, pygame.K_m, pygame.K_SPACE, pygame.K_RETURN):
+                    self.reset_game("Medium")
+                elif event.key in (pygame.K_3, pygame.K_h):
+                    self.reset_game("Hard")
+                elif event.key in (pygame.K_q, pygame.K_ESCAPE):
+                    pygame.event.post(pygame.event.Event(pygame.QUIT))
             return
 
         if event.type == pygame.KEYDOWN and event.key in (pygame.K_SPACE, pygame.K_UP, pygame.K_w):
@@ -132,6 +167,10 @@ class GameEngine:
         score_text = self.font.render(f"Score: {self.score}", True, WHITE)
         screen.blit(score_text, (10, 10))
 
+        diff_text = self.font.render(f"Difficulty: {self.difficulty}", True, WHITE)
+        diff_rect = diff_text.get_rect(topright=(self.width - 15, 10))
+        screen.blit(diff_text, diff_rect)
+
         if self.game_over:
             if not getattr(self, "_game_over_logged", False):
                 print("Game over! Final score:", self.score)
@@ -139,20 +178,35 @@ class GameEngine:
 
             # Dark translucent overlay
             overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 190))
+            overlay.fill((0, 0, 0, 215))
             screen.blit(overlay, (0, 0))
 
             # Game Over Title
             title_surf = self.title_font.render("GAME OVER", True, RED)
-            title_rect = title_surf.get_rect(center=(self.width // 2, self.height // 2 - 60))
+            title_rect = title_surf.get_rect(center=(self.width // 2, self.height // 2 - 125))
             screen.blit(title_surf, title_rect)
 
             # Final Score
             score_surf = self.subtitle_font.render(f"Final Score: {self.score}", True, GOLD)
-            score_rect = score_surf.get_rect(center=(self.width // 2, self.height // 2 + 5))
+            score_rect = score_surf.get_rect(center=(self.width // 2, self.height // 2 - 75))
             screen.blit(score_surf, score_rect)
 
-            # User input prompt
-            prompt_surf = self.prompt_font.render("Press SPACE or ENTER to Continue", True, GRAY)
-            prompt_rect = prompt_surf.get_rect(center=(self.width // 2, self.height // 2 + 65))
-            screen.blit(prompt_surf, prompt_rect)
+            # Replay Menu Prompt
+            menu_title = self.subtitle_font.render("Choose Difficulty to Replay:", True, WHITE)
+            menu_title_rect = menu_title.get_rect(center=(self.width // 2, self.height // 2 - 25))
+            screen.blit(menu_title, menu_title_rect)
+
+            # Difficulty Options List
+            options = [
+                ("[1 / E] Easy   - Light Gravity & High Jump", (120, 230, 120)),
+                ("[2 / M] Medium - Standard Platforming", (100, 190, 255)),
+                ("[3 / H] Hard   - Heavy Gravity & Tight Jump", (255, 140, 140)),
+                ("[SPACE/ENTER] - Quick Replay (Current)", (240, 240, 240)),
+                ("[Q / ESC]     - Exit Game", (180, 180, 180)),
+            ]
+            y_offset = self.height // 2 + 15
+            for text, col in options:
+                opt_surf = self.prompt_font.render(text, True, col)
+                opt_rect = opt_surf.get_rect(center=(self.width // 2, y_offset))
+                screen.blit(opt_surf, opt_rect)
+                y_offset += 28
