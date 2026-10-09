@@ -52,26 +52,36 @@ class GameEngine:
         if self.game_over:
             return
 
-        self.player.vy += self.gravity
+        self.terminal_velocity = 16.0
+        self.player.vy = min(self.player.vy + self.gravity, self.terminal_velocity)
         self.player.x = max(0, self.player.x + self.player.vx)
 
-        # NOTE: gravity has no terminal-velocity cap, so vertical speed
-        # keeps growing the longer the player falls. Collision is only
-        # checked against the player's rect *after* it has already
-        # moved for the frame - there's no check for whether the
-        # player's path crossed a platform along the way. After a
-        # long enough fall (e.g. off the elevated middle platform),
-        # a single frame's movement can carry the player from just
-        # above a platform to just below it without the two rects
-        # ever overlapping, so the platform is skipped entirely and
-        # the player falls straight through. See Task 1 in the README.
-        self.player.y += self.player.vy
+        # Swept vertical collision detection:
+        # Check if the player's vertical trajectory crosses any platform top surface
+        # during this frame, preventing tunneling at high fall speeds.
+        prev_bottom = self.player.y + self.player.height
+        new_y = self.player.y + self.player.vy
+        new_bottom = new_y + self.player.height
+
         self.player.on_ground = False
-        for platform in self.platforms:
-            if self.player.rect().colliderect(platform.rect()) and self.player.vy >= 0:
-                self.player.y = platform.y - self.player.height
+        if self.player.vy >= 0:
+            best_platform = None
+            for platform in self.platforms:
+                # Check horizontal overlap with platform
+                if self.player.x + self.player.width > platform.x and self.player.x < platform.x + platform.width:
+                    # Did the player cross or land onto the platform top surface?
+                    if prev_bottom <= platform.y + 4 and new_bottom >= platform.y:
+                        if best_platform is None or platform.y < best_platform.y:
+                            best_platform = platform
+
+            if best_platform:
+                self.player.y = best_platform.y - self.player.height
                 self.player.vy = 0
                 self.player.on_ground = True
+            else:
+                self.player.y = new_y
+        else:
+            self.player.y = new_y
 
         for hazard in self.hazards:
             if self.player.rect().colliderect(hazard.rect()):
