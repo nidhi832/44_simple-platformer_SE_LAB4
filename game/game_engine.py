@@ -52,7 +52,7 @@ class GameEngine:
             Platform(420, ground_y - 60, 120),
             Platform(600, ground_y, 180),
         ]
-        self.hazards = [Hazard(240, ground_y - 14, 100)]
+        self.hazards = [Hazard(270, ground_y - 14, 40)]
         self.goal_x = 740
 
         self.score = 0
